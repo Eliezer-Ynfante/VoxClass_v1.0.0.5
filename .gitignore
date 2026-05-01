@@ -1,0 +1,89 @@
+# ========================================================
+# ARCHIVOS DE ENTORNO Y SECRETOS (¡CRÍTICO!)
+# ========================================================
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.crt
+*.sqlite
+*.sqlite3
+docker-compose.override.yml
+auth.json
+
+# ========================================================
+# BACKEND LARAVEL (PHP)
+# ========================================================
+/backend-laravel/vendor/
+/backend-laravel/node_modules/
+/backend-laravel/public/build/
+/backend-laravel/public/hot
+/backend-laravel/public/storage
+/backend-laravel/storage/*.key
+/backend-laravel/storage/app/public/
+/backend-laravel/storage/framework/cache/
+/backend-laravel/storage/framework/sessions/
+/backend-laravel/storage/framework/testing/
+/backend-laravel/storage/framework/views/
+/backend-laravel/storage/logs/
+/backend-laravel/bootstrap/cache/
+Homestead.json
+Homestead.yaml
+
+# ========================================================
+# AI SERVICE (Python / FastAPI)
+# ========================================================
+__pycache__/
+*.py[cod]
+*$py.class
+/ai-service/venv/
+/ai-service/.venv/
+/ai-service/env/
+/ai-service/.pytest_cache/
+/ai-service/.coverage
+/ai-service/htmlcov/
+/ai-service/models/ # Ignora si descargas los modelos pesados como Whisper/SpaCy directamente al repo
+
+# ========================================================
+# EDGE DEVICE (Python / C++)
+# ========================================================
+/edge-device/venv/
+/edge-device/.venv/
+/edge-device/build/
+/edge-device/dist/
+
+# ========================================================
+# INFRAESTRUCTURA Y VOLÚMENES DOCKER
+# ========================================================
+# Ignora cualquier persistencia de la base de datos para no subir tu base local
+/infrastructure/docker/postgres/data/
+/infrastructure/pgdata/
+/infrastructure/db-data/
+vox-db-data/
+
+# ========================================================
+# LOGS Y CARPETAS TEMPORALES
+# ========================================================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+/storage/ # Si esta carpeta raíz es para guardar audios/PDFs temporalmente
+/infrastructure/logs/
+/backend-laravel/storage/logs/
+
+# ========================================================
+# IDEs Y SISTEMAS OPERATIVOS
+# ========================================================
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
