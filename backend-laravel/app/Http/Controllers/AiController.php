@@ -19,6 +19,16 @@ class AiController extends Controller
         return view('test-ai');
     }
 
+    public function showIntegratedView() 
+    {
+    return view('integrated-session');
+    }
+
+    public function showLiveSessionView() 
+    {
+        return view('live-session');
+    }
+
     public function transcribe(Request $request)
     {
         $result = $this->aiService->transcribe($request->file('audio'));
