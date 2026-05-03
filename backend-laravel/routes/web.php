@@ -3,9 +3,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AiController;
 use App\Http\Controllers\LiveSessionController;
 
+Route::get('/', [AiController::class, 'showLiveSessionView']);
 Route::get('/test-ai', [AiController::class, 'showTestView']);
 Route::get('/integrated-session', [AiController::class, 'showIntegratedView']);
-Route::get('/live-session', [AiController::class, 'showLiveSessionView']);
 
 Route::post('/ai/transcribe', [AiController::class, 'transcribe']);
 Route::post('/ai/analyze-pdf', [AiController::class, 'analyzePdf']);
