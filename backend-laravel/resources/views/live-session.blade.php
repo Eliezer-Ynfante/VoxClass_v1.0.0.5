@@ -240,6 +240,11 @@
         let mediaRecorder = null;
         let audioStream = null;
         let chunkInterval = null;
+        
+        let currentModuleId = null;
+        let currentSessionId = null;
+        let lastSimilarityData = null;
+        let extractedKeywords = [];
 
         // Utilidades UI
         function log(msg, type = "info") {
@@ -286,6 +291,7 @@
                 }
                 
                 if (data.type === 'keywords') {
+                    extractedKeywords = data.keywords; // Guardar temporalmente
                     const kwDiv = document.getElementById('pdf-keywords');
                     kwDiv.innerHTML = "";
                     data.keywords.forEach(kw => {
@@ -298,14 +304,32 @@
                     document.getElementById('pdf-title').innerText = data.title;
                     resultsDiv.style.display = 'block';
                     
-                    log("PDF analizado correctamente. Listo para grabar.", "success");
-                    btn.innerText = "PDF Cargado";
-                    
-                    // Habilitar la sección de grabación
-                    const recSection = document.getElementById('recording-section');
-                    recSection.style.opacity = '1';
-                    recSection.style.pointerEvents = 'auto';
-                    socket.close();
+                    // -- NUEVO: GUARDAR EN BASE DE DATOS --
+                    const formData = new FormData();
+                    formData.append('title', data.title);
+                    formData.append('expected_content', data.full_text);
+                    extractedKeywords.forEach(kw => formData.append('keywords[]', kw));
+                    formData.append('pdf_file', fileInput.files[0]);
+
+                    fetch('/modules', {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': csrfToken },
+                        body: formData
+                    }).then(r => r.json()).then(res => {
+                        currentModuleId = res.module_id;
+                        log("PDF analizado y guardado en BD. Listo para grabar.", "success");
+                        btn.innerText = "PDF Cargado";
+                        
+                        // Habilitar la sección de grabación
+                        const recSection = document.getElementById('recording-section');
+                        recSection.style.opacity = '1';
+                        recSection.style.pointerEvents = 'auto';
+                        socket.close();
+                    }).catch(e => {
+                        log("Error guardando PDF en BD", "error");
+                        btn.disabled = false;
+                        socket.close();
+                    });
                 }
 
                 if (data.type === 'error') {
@@ -335,8 +359,20 @@
                     document.getElementById('placeholder-text').style.display = 'none';
                     log("🎤 Grabación iniciada. Capturando fragmentos de 10s...", "warn");
                     
-                    // Iniciar bucle de grabación
-                    recordNextChunk();
+                    // -- NUEVO: INICIAR SESIÓN EN BASE DE DATOS --
+                    fetch('/sessions/start', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                        body: JSON.stringify({ learning_module_id: currentModuleId })
+                    }).then(r => r.json()).then(res => {
+                        currentSessionId = res.session_id;
+                        log(`Sesión #${currentSessionId} creada en BD.`);
+                        // Iniciar bucle de grabación
+                        recordNextChunk();
+                    }).catch(e => {
+                        log("Error creando sesión en BD", "error");
+                        recordNextChunk(); // Fallback en caso de error
+                    });
                 } catch (err) {
                     log("Error accediendo al micrófono: " + err.message, "error");
                 }
@@ -348,6 +384,21 @@
                 btnText.innerText = "Clase Finalizada";
                 btn.disabled = true;
                 log("⏹️ Clase finalizada.", "warn");
+                
+                // -- NUEVO: FINALIZAR SESIÓN EN BASE DE DATOS --
+                if (currentSessionId) {
+                    fetch(`/sessions/${currentSessionId}/finalize`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                        body: JSON.stringify({
+                            transcription: fullTranscription,
+                            similarity_score: lastSimilarityData ? lastSimilarityData.similarity : 0,
+                            interpretation: lastSimilarityData ? lastSimilarityData.interpretation : 'N/A'
+                        })
+                    }).then(r => r.json()).then(res => {
+                        log(res.message, "success");
+                    }).catch(e => log("Error finalizando sesión en BD", "error"));
+                }
             }
         }
 
@@ -444,6 +495,7 @@
 
                 if(response.ok) {
                     const data = await response.json();
+                    lastSimilarityData = data;
                     const scoreObj = document.getElementById('sim-score');
                     const interpObj = document.getElementById('sim-interp');
                     
