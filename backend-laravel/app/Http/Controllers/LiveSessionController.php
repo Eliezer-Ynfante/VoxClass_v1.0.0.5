@@ -5,9 +5,17 @@ namespace App\Http\Controllers;
 use App\Models\ClassSession;
 use App\Models\LearningModule;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class LiveSessionController extends Controller
 {
+    // GET /api/modules/{id}
+    public function getModule($id)
+    {
+        $module = LearningModule::findOrFail($id);
+        return response()->json($module);
+    }
+
     // POST /api/modules
     public function saveModule(Request $request)
     {
@@ -74,5 +82,20 @@ class LiveSessionController extends Controller
         }
 
         return response()->json(['message' => 'Sesión consolidada']);
+    }
+
+    // GET /sessions/{id}/report
+    public function showReport($id)
+    {
+        $session = ClassSession::with('learningModule')->findOrFail($id);
+        return view('report', compact('session'));
+    }
+
+    // GET /sessions/{id}/report/pdf
+    public function exportReportPdf($id)
+    {
+        $session = ClassSession::with('learningModule')->findOrFail($id);
+        $pdf = Pdf::loadView('report-pdf', compact('session'));
+        return $pdf->download('reporte_sesion_' . $session->id . '.pdf');
     }
 }

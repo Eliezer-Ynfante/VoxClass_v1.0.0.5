@@ -184,9 +184,19 @@
         <!-- Módulo PDF -->
         <div class="card" id="pdf-section">
             <h3>1. Material de Clase (PDF)</h3>
-            <p>Sube el contenido base para evaluar la coherencia.</p>
-            <input type="file" id="pdfFile" accept="application/pdf">
-            <button id="btnPdf" onclick="analyzePdf()">Analizar Documento</button>
+            <p>Selecciona un módulo existente o sube uno nuevo.</p>
+            
+            <select id="moduleSelect" onchange="handleModuleSelection()" style="width: 100%; padding: 10px; margin-bottom: 15px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border); border-radius: 8px;">
+                <option value="">-- Subir Nuevo PDF --</option>
+                @foreach($modules as $module)
+                    <option value="{{ $module->id }}">{{ $module->title }}</option>
+                @endforeach
+            </select>
+
+            <div id="new-pdf-section">
+                <input type="file" id="pdfFile" accept="application/pdf">
+                <button id="btnPdf" onclick="analyzePdf()">Analizar Documento</button>
+            </div>
             
             <div class="progress-bar-container" id="pdf-progress-cont">
                 <div class="progress-bar" id="pdf-progress"></div>
@@ -213,6 +223,14 @@
             <span class="metric-label">Coherencia Pedagógica</span>
             <span class="metric-value" id="sim-score">--%</span>
             <p id="sim-interp" style="margin-top: 5px; font-size: 0.8rem;">Esperando datos...</p>
+        </div>
+
+        <!-- Controles Post-Clase -->
+        <div id="post-class-controls" style="display: none; margin-top: 15px; gap: 10px; flex-direction: column;">
+            <a id="btnReport" href="#" target="_blank" style="text-decoration: none;">
+                <button style="background: var(--success);">Ver Reporte</button>
+            </a>
+            <button onclick="startNewClass()" style="background: var(--bg-color); border: 1px solid var(--border);">Iniciar Nueva Clase</button>
         </div>
     </div>
 
@@ -256,6 +274,54 @@
             if(type === 'warn') p.className = 'log-warn';
             cons.appendChild(p);
             cons.scrollTop = cons.scrollHeight;
+        }
+
+        function handleModuleSelection() {
+            const select = document.getElementById('moduleSelect');
+            const newPdfSection = document.getElementById('new-pdf-section');
+            const resultsDiv = document.getElementById('pdf-results');
+            const recSection = document.getElementById('recording-section');
+
+            if (select.value === "") {
+                newPdfSection.style.display = 'block';
+                resultsDiv.style.display = 'none';
+                recSection.style.opacity = '0.5';
+                recSection.style.pointerEvents = 'none';
+                currentModuleId = null;
+                pdfText = "";
+            } else {
+                newPdfSection.style.display = 'none';
+                log("Cargando módulo existente desde BD...");
+                
+                fetch(`/modules/${select.value}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        currentModuleId = data.id;
+                        pdfText = data.expected_content;
+                        
+                        document.getElementById('pdf-title').innerText = data.title;
+                        const kwDiv = document.getElementById('pdf-keywords');
+                        kwDiv.innerHTML = "";
+                        
+                        let keywords = [];
+                        try {
+                            keywords = typeof data.keywords === 'string' ? JSON.parse(data.keywords) : data.keywords;
+                        } catch(e) {}
+                        
+                        if (Array.isArray(keywords)) {
+                            keywords.forEach(kw => {
+                                kwDiv.innerHTML += `<span class="keyword-badge">${kw}</span>`;
+                            });
+                        }
+                        
+                        resultsDiv.style.display = 'block';
+                        log(`Módulo "${data.title}" cargado. Listo para grabar.`, "success");
+                        
+                        recSection.style.opacity = '1';
+                        recSection.style.pointerEvents = 'auto';
+                    })
+                    .catch(e => log("Error cargando módulo", "error"));
+            }
         }
 
         // ---------------------------------------------------------
@@ -397,9 +463,40 @@
                         })
                     }).then(r => r.json()).then(res => {
                         log(res.message, "success");
+                        
+                        // Mostrar controles post-clase
+                        const postControls = document.getElementById('post-class-controls');
+                        postControls.style.display = 'flex';
+                        const btnReport = document.getElementById('btnReport');
+                        btnReport.href = `/sessions/${currentSessionId}/report`;
+                        
                     }).catch(e => log("Error finalizando sesión en BD", "error"));
                 }
             }
+        }
+
+        function startNewClass() {
+            // Reset state
+            fullTranscription = "";
+            lastSimilarityData = null;
+            currentSessionId = null;
+            
+            // UI Reset
+            document.getElementById('transcription-box').innerHTML = '<span class="pending" id="placeholder-text">Esperando a que inicie la clase...</span>';
+            document.getElementById('sim-score').innerText = '--%';
+            document.getElementById('sim-score').style.color = 'var(--success)';
+            document.getElementById('sim-interp').innerText = 'Esperando datos...';
+            document.getElementById('console').innerHTML = '<p style="color: var(--text-muted)">// Consola de Sistema Inicializada</p>';
+            
+            // Hide post controls
+            document.getElementById('post-class-controls').style.display = 'none';
+            
+            // Reset Record Button
+            const btn = document.getElementById('btnRecord');
+            btn.disabled = false;
+            document.getElementById('btnRecordText').innerText = 'Iniciar Clase';
+            
+            log("Listo para una nueva clase.", "info");
         }
 
         // Graba exactamente un bloque temporal y se reinicia

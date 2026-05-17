@@ -26,7 +26,8 @@ class AiController extends Controller
 
     public function showLiveSessionView() 
     {
-        return view('live-session');
+        $modules = \App\Models\LearningModule::orderBy('created_at', 'desc')->get();
+        return view('live-session', compact('modules'));
     }
 
     public function transcribe(Request $request)

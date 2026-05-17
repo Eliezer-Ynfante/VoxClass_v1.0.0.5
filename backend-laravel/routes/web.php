@@ -11,6 +11,10 @@ Route::post('/ai/transcribe', [AiController::class, 'transcribe']);
 Route::post('/ai/analyze-pdf', [AiController::class, 'analyzePdf']);
 Route::post('/ai/similarity', [AiController::class, 'checkSimilarity']);
 
+Route::get('/modules/{id}', [LiveSessionController::class, 'getModule']);
 Route::post('/modules', [LiveSessionController::class, 'saveModule']);
 Route::post('/sessions/start', [LiveSessionController::class, 'startSession']);
 Route::put('/sessions/{id}/finalize', [LiveSessionController::class, 'finalizeSession']);
+
+Route::get('/sessions/{id}/report', [LiveSessionController::class, 'showReport']);
+Route::get('/sessions/{id}/report/pdf', [LiveSessionController::class, 'exportReportPdf']);
